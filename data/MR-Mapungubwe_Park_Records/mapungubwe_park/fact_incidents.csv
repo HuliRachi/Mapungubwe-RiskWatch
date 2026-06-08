@@ -1,0 +1,31 @@
+incident_id,date_id,date,zone_id,incident_type,animals_involved,outcome,animal
+1,766,2025-02-04,16,Trespassing,1,Investigating,Elephant
+2,965,2025-08-22,10,Trespassing,0,Arrested,None
+3,861,2025-05-10,1,Poaching Attempt,1,Neutralized,None
+4,1041,2025-11-06,17,Poaching Attempt,0,Escaped,None
+5,897,2025-06-15,11,Snare Found,0,Investigating,None
+6,929,2025-07-17,2,Illegal Campfire,2,Neutralized,Elephant
+7,686,2024-11-16,6,Fence Breach,0,Investigating,None
+8,414,2024-02-18,12,Poaching Attempt,1,Arrested,Rhino
+9,845,2025-04-24,18,Poaching Attempt,1,Escaped,Rhino
+10,649,2024-10-10,3,Illegal Campfire,1,Neutralized,Impala
+11,200,2023-07-19,13,Trespassing,2,Investigating,Rhino
+12,432,2024-03-07,13,Fence Breach,2,Escaped,Elephant
+13,852,2025-05-01,2,Illegal Campfire,1,Neutralized,Kudu
+14,396,2024-01-31,2,Snare Found,0,Escaped,None
+15,1090,2025-12-25,1,Trespassing,1,Neutralized,None
+16,262,2023-09-19,13,Fence Breach,0,Escaped,None
+17,683,2024-11-13,16,Trespassing,0,Arrested,None
+18,738,2025-01-07,1,Illegal Campfire,0,Investigating,None
+19,736,2025-01-05,12,Fence Breach,0,Arrested,None
+20,211,2023-07-30,18,Poaching Attempt,0,Arrested,None
+21,637,2024-09-28,14,Snare Found,1,Neutralized,Impala
+22,682,2024-11-12,9,Trespassing,1,Escaped,Impala
+23,359,2023-12-25,16,Snare Found,2,Arrested,None
+24,280,2023-10-07,8,Trespassing,1,Neutralized,Rhino
+25,251,2023-09-08,4,Trespassing,0,Neutralized,None
+26,803,2025-03-13,14,Trespassing,1,Investigating,Impala
+27,1049,2025-11-14,14,Snare Found,0,Neutralized,None
+28,271,2023-09-28,10,Poaching Attempt,2,Investigating,Kudu
+29,27,2023-01-27,1,Trespassing,1,Investigating,Impala
+30,399,2024-02-03,14,Illegal Campfire,1,Escaped,Elephant

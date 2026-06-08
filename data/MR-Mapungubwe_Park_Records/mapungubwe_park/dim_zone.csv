@@ -1,0 +1,21 @@
+zone_id,zone_name,habitat_type,distance_from_gate,historical_poaching_count
+1,Confluence Point,Mopane Shrubland,5,2
+2,Tree Top Walkway,Rocky Outcrop,1,6
+3,Leokwe Camp,Savannah,12,3
+4,Schroda Dam,Rocky Outcrop,10,8
+5,Maloutswa Bird Hide,Rocky Outcrop,6,2
+6,Limpopo River Bank,Forest,13,4
+7,Shashe River Bank,Savannah,12,2
+8,Poacher's Corner,Savannah,9,6
+9,Elephant Trail,Savannah,1,4
+10,Baobab Valley,Rocky Outcrop,11,8
+11,Sandstone Formations,Mopane Shrubland,11,6
+12,Klipspringer Pass,Savannah,15,1
+13,Rhino Thicket,Wetland,10,3
+14,Mopane Woodland,Rocky Outcrop,12,8
+15,Wilderness Trails,Forest,12,1
+16,Eagle's Nest Peak,Mopane Shrubland,15,8
+17,Cultural Landscape,Wetland,14,4
+18,Mapungubwe Hill,Wetland,14,1
+19,Southern Border Gate,Forest,15,3
+20,Vhembe Cabin,Mopane Shrubland,14,6
