@@ -1,0 +1,23 @@
+steps:
+  # install python dependencies
+  - name: 'python'
+    entrypoint: pip
+    args: ['install', '-r', 'utils/requirements.txt', '--user']
+
+    #run the script to upload DAGs and Data to the composer bucket
+
+  - name: 'python'
+    entrypoint: python
+    args:
+      - 'utils/add_dags_to_composer.py'
+      - '--dags_directory=${_DAGS_DIRECTORY}'
+      - '--dags_bucket=${_DAGS_BUCKET}'
+      - '--data_directory=${_DATA_DIRECTORY}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _DAGS_DIRECTORY: 'workflows/'
+  _DAGS_BUCKET: 'africa-south1-kruger-compos-2b9db095-bucket' # change this
+  _DATA_DIRECTORY: 'data/'
