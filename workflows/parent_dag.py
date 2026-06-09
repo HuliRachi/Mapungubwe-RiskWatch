@@ -39,7 +39,12 @@ with DAG (
         wait_for_completion = True,
     )
     
+    trigger_bigquery_dag = TriggerDagRunOperator(
+        task_id = "trigger_bigquery_dag",
+        trigger_dag_id = "bigquery_dag",
+        wait_for_completion = True,
+    )
 
 # Step 5 - Define Dependencies
 
-trigger_pyspark_dag
+trigger_pyspark_dag >> trigger_bigquery_dag
