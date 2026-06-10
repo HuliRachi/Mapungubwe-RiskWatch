@@ -48,8 +48,9 @@ def log_event(event_type, message, table=None):
     print(f"[{log_entry['timestamp']}]{event_type} - {message}")
 
 #step 3 - save logging to GCS
+"""
 def save_logs_to_gcs():
-    """save logs to a json file and upload to gcs"""
+    # save logs to a json file and upload to gcs
     log_filename = f"pipeline_log_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.json"
     log_filepath = f"temp/pipeline_logs/{log_filename}"
     json_data = json.dumps(log_entries, indent=4)
@@ -62,15 +63,15 @@ def save_logs_to_gcs():
     blob.upload_from_string(json_data, content_type="application/json")
 
     print(f" Logs successfully saved to GCS at gs://{GCS_BUCKET}/{log_filepath}")
-
-
+"""
+"""
 def save_logs_to_bigquery():
-    """save logs to bigquery"""
+    # save logs to bigquery
     if log_entries:
         log_df = spark.createDataFrame(log_entries)
         log_df.write.format("bigquery").option("table", BQ_LOG_TABLE).option("temporaryGcsBucket", BQ_TEMP_PATH).mode("append").save()
         print("Logs stored in Bigquery for future analysis")
-
+"""
 #step 6 - function to move existing files to archive
 
 def move_existing_files_to_archive(table):
@@ -117,14 +118,15 @@ def get_latest_watermark(table_name):
 
 
 # Step 7 Function to Extract Data from MySQL and Save to GCS
-def extract_and_save_to_landing(table, load_type, watermark_col):
+def extract_and_save_to_landing(table, loadtype, watermark_col):
     try: ## check first if the file is incremental or full
-        last_watermark = get_latest_watermark(table) if load_type.lower() == "increment" else None ##if is incremental go to audit table/config table, get the timestamp using select
+        last_watermark = get_latest_watermark(table) if loadtype.lower() == "increment" else None ##if is incremental go to audit table/config table, get the timestamp using select
         log_event("INFO", f"Latest watermark for {table}: {last_watermark}", table=table)
 
-        query = f"(SELECT * FROM {table}) AS t" if load_type.lower() == "full" else \
+        query = f"(SELECT * FROM {table}) AS t" if loadtype.lower() == "full" else \
                 f"(SELECT * FROM {table} WHERE {watermark_col} > '{last_watermark}') AS t" ##if is full just query it, if is incremental query it using latest date
 
+        # extracting from cloud sql database
         df = (spark.read.format("jdbc")
                 .option("url", MYSQL_CONFIG["url"])
                 .option("user", MYSQL_CONFIG["user"])
@@ -133,11 +135,12 @@ def extract_and_save_to_landing(table, load_type, watermark_col):
                 .option("dbtable", query)
                 .load())
 
-        log_event("SUCCESS", f" Successfully extracted data from {table}", table=table)
+        log_event("SUCCESS", f" Successfully extracted data from cloud SQL {table}", table=table)
 
         today = datetime.datetime.today().strftime('%d%m%Y')
         JSON_FILE_PATH = f"landing/{SANPARK_NAME}/{table}/{table}_{today}.json"
 
+        #saving to landing
         bucket = storage_client.bucket(GCS_BUCKET)
         blob = bucket.blob(JSON_FILE_PATH)
         blob.upload_from_string(df.toPandas().to_json(orient="records", lines=True), content_type="application/json")
@@ -145,8 +148,9 @@ def extract_and_save_to_landing(table, load_type, watermark_col):
         log_event("SUCCESS", f" JSON file successfully written to gs://{GCS_BUCKET}/{JSON_FILE_PATH}", table=table)
         
         # Insert Audit Entry
+        """
         audit_df = spark.createDataFrame([ 
-            (table, load_type, df.count(), datetime.datetime.now(), "SUCCESS")], 
+            (table, loadtype, df.count(), datetime.datetime.now(), "SUCCESS")], 
             ["tablename", "loadtype", "record_count", "load_timestamp", "status"])
 
         (audit_df.write.format("bigquery")
@@ -156,7 +160,7 @@ def extract_and_save_to_landing(table, load_type, watermark_col):
             .save())
 
         log_event("SUCCESS", f" Audit log updated for {table}", table=table)
-
+        """
     except Exception as e:
         log_event("ERROR", f"Error processing {table}: {str(e)}", table=table)
 
@@ -175,9 +179,9 @@ config_df = read_config_file()
 #loop config file
 for row in config_df.collect():
     if row["is_active"] == '1' :
-        db, table, load_type, watermark, _ , target_path = row
+        db, table, loadtype, watermark, _ , target_path = row
         move_existing_files_to_archive(table)
-        extract_and_save_to_landing(table, load_type, watermark)
+        extract_and_save_to_landing(table, loadtype, watermark)
 
-save_logs_to_gcs()
-save_logs_to_bigquery()
+#save_logs_to_gcs()
+#save_logs_to_bigquery()
