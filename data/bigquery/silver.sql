@@ -70,7 +70,7 @@ create table if not exists `project-a2ce378b-71f9-4087-95b.silver_dataset.fact_i
     incident_type       string,
     animals_involved    int64,
     outcome             string,
-    animal              string,
+    animals              string,
     is_quarantined      boolean,
     is_current          boolean,
     InsertedDate        timestamp,
@@ -78,14 +78,14 @@ create table if not exists `project-a2ce378b-71f9-4087-95b.silver_dataset.fact_i
 );
 create or replace table `project-a2ce378b-71f9-4087-95b.silver_dataset.quality_check` as
 select incident_id, date_id, date, zone_id, incident_type, animals_involved, outcome,
-        animal, 
+        animals, 
     case
         when incident_id is null or date_id is null then True
         else False
     end as is_quarantined
 from(
     select incident_id, date_id, date, zone_id, incident_type, animals_involved, outcome,
-        animal from `project-a2ce378b-71f9-4087-95b.bronze_dataset.fact_incidents`
+        animals from `project-a2ce378b-71f9-4087-95b.bronze_dataset.fact_incidents`
 );
 
 merge into `project-a2ce378b-71f9-4087-95b.silver_dataset.fact_incidents` as target
@@ -100,7 +100,7 @@ when matched and (
     target.incident_type <> source.incident_type OR
     target.animals_involved <> source.animals_involved OR
     target.outcome <> source.outcome OR
-    target.animal <> source.animal OR
+    target.animals <> source.animals OR
     target.is_quarantined <> source.is_quarantined
 )
 then update set 
@@ -116,7 +116,7 @@ then insert(
     incident_type,
     animals_involved,
     outcome,
-    animal,
+    animals,
     is_quarantined,
     is_current,
     InsertedDate,
@@ -130,7 +130,7 @@ values(
     source.incident_type,
     source.animals_involved,
     source.outcome,
-    source.animal,
+    source.animals,
     source.is_quarantined,
     True,
     CURRENT_TIMESTAMP(),
