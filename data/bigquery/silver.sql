@@ -76,7 +76,7 @@ create table if not exists `project-a2ce378b-71f9-4087-95b.silver_dataset.fact_i
     InsertedDate        timestamp,
     ModifiedDate        timestamp
 );
-create or replace table `project-a2ce378b-71f9-4087-95b.silver_dataset.quality_check` as
+create or replace table `project-a2ce378b-71f9-4087-95b.silver_dataset.quality_checks` as
 select incident_id, date_id, date, zone_id, incident_type, animals_involved, outcome,
         animals, 
     case
@@ -89,7 +89,7 @@ from(
 );
 
 merge into `project-a2ce378b-71f9-4087-95b.silver_dataset.fact_incidents` as target
-using `project-a2ce378b-71f9-4087-95b.silver_dataset.quality_check` as source
+using `project-a2ce378b-71f9-4087-95b.silver_dataset.quality_checks` as source
 on target.incident_id = source.incident_id
 and target.is_current = True
 
