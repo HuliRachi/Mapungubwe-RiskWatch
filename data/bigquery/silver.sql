@@ -16,7 +16,7 @@ select date_id, date, month, season, is_weekend,
         else False
     end as is_quarantined
 from(
-    date_id, date, month, season, is_weekend from  `project-a2ce378b-71f9-4087-95b.bronze_dataset.dim_date`
+    select date_id, date, month, season, is_weekend from  `project-a2ce378b-71f9-4087-95b.bronze_dataset.dim_date`
 );
 
 -- dim_ranger truncate and load
@@ -35,7 +35,7 @@ select ranger_id, ranger_name, years_of_experience,
         else False
     end as is_quarantined
 from(
-    ranger_id, ranger_name, years_of_experience from `project-a2ce378b-71f9-4087-95b.bronze_dataset.dim_ranger`
+    select ranger_id, ranger_name, years_of_experience from `project-a2ce378b-71f9-4087-95b.bronze_dataset.dim_ranger`
 );
     
 
@@ -57,7 +57,7 @@ select zone_id, zone_name, habitat_type, distance_from_gate, historical_poaching
         else False
     end as is_quarantined
 from (
-    zone_id, zone_name, habitat_type, distance_from_gate, historical_poaching_count
+    select zone_id, zone_name, habitat_type, distance_from_gate, historical_poaching_count
     from `project-a2ce378b-71f9-4087-95b.bronze_dataset.dim_zone`
 );
 
