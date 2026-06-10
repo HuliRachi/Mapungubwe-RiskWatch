@@ -1,7 +1,7 @@
 -- dim_date truncate and load
 create table if not exists `project-a2ce378b-71f9-4087-95b.silver_dataset.dim_date`(
     date_id         int64,
-    date            timestamp,
+    date            int64,
     month           int64,
     season          string,
     is_weekend      boolean,
@@ -65,7 +65,7 @@ from (
 create table if not exists `project-a2ce378b-71f9-4087-95b.silver_dataset.fact_incidents`(
     incident_id         int64,
     date_id             int64,
-    date                timestamp,
+    date                int64,
     zone_id             int64,
     incident_type       string,
     animals_involved    int64,
@@ -142,7 +142,7 @@ drop table if exists `project-a2ce378b-71f9-4087-95b.silver_dataset.quality_chec
 create table if not exists `project-a2ce378b-71f9-4087-95b.silver_dataset.fact_patrol`(
     patrol_id       int64,
     date_id         int64,
-    date            timestamp,
+    date            int64,
     zone_id         int64,
     ranger_id       int64,
     hours_patrolled int64,
