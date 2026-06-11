@@ -99,7 +99,7 @@ def move_existing_files_to_archive(table):
 
         log_event("INFO", f"Moved {file} to {archive_path}", table=table)
 
-# function to get latest watermark
+
 def get_latest_watermark(table_name): 
     query = f"""
         SELECT MAX(load_timestamp) AS latest_timestamp
