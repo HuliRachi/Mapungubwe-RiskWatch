@@ -25,6 +25,15 @@ I built a scalable "Data Pipeline" that automates the collection, cleaning, and 
 
 The core data warehousing engine separates historical structural reference data (Dimension tables loaded via Full Load) from dynamic, incoming operational events (Fact tables loaded via Incremental Load). This allows the system to scale efficiently as field data grows daily.
 
+### 📊 PowerBI Dashboard Analysis
+
+<img src="images/Mapungubwe RiskWatch_Dasboard-Analysis.png" alt="PowerBI_Dashboard" width="700" height="350">
+
+1. **Area Chart** - Displays the percentage risk levels recorded across the different conservation zones.
+2. **Pie Chart** - Breaks down total anti-poaching incident classifications
+3. **Stacked Bar Graph** - Shows poaching and trespassing cases arrested vs incidents still investigated.
+4. **Matrix Table** - Shows most common months which these incidents happen.
+
 ### 🛠️ Tech Stack & Pipeline Engine
 
 - **Orchestration:** Cloud Composer (Apache Airflow) for end-to-end workflow automation, task dependency management, and scheduling.
@@ -37,7 +46,18 @@ The core data warehousing engine separates historical structural reference data 
 
 ---
 
+### 🗺️ Data Pipeline Architecture Diagram
+
+<img src="images/Mapungubwe RiskWatch_Architecture-Diagram.png" alt="Architecture_Diagram" width="700" height="350">
+
+- Raw CSV files (`dim_zone`, `dim_ranger`,`dim_date`, `fact_patrol`, `fact_incidents`) enter Google Cloud Storage in the Landing layer.
+- Apache Airflow orchestrates the pipeline, moving the data to the Bronze layer using external tables.
+- PySpark on Cloud Dataproc performs schema validation and quality checks (`is_quarantine`) to move clean data into the Silver layer.
+- Finally, data is aggregated into business analytics models in the Gold layer inside BigQuery, feeding the Power BI application directly.
+
 ### 🗄️ Core Star Schema Architecture
+
+<img src="images/Mapungubwe RiskWatch_ER-Diagram.png" alt="Schema_ER_Diagram" width="700" height="350">
 
 The data lake models 5 distinct structural tables organized to map out field operations efficiently:
 
