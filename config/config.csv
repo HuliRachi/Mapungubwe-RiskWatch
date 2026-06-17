@@ -1,0 +1,6 @@
+database,tablename,loadtype,watermark,is_active,target_path
+mapungubwe-mysql-db,dim_date,full,,1,mapungubwepark
+mapungubwe-mysql-db,dim_ranger,full,,1,mapungubwepark
+mapungubwe-mysql-db,dim_zone,full,,1,mapungubwepark
+mapungubwe-mysql-db,fact_incidents,increment,date,1,mapungubwepark
+mapungubwe-mysql-db,fact_patrol,increment,date,1,mapungubwepark

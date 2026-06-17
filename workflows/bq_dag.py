@@ -1,19 +1,26 @@
-
-# Step 1 - Import modules
-
-import airflow 
+import os
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 
+# 🐳 Docker vs GCP Cloud Environment Switch
+IS_LOCAL = os.getenv("RUNNING_ENV") == "LOCAL_DOCKER"
+
+if IS_LOCAL:
+    # Local Docker Mode: Uses your custom Python operator and utils functions
+    from airflow.operators.python import PythonOperator
+    from datawarehouse.data_utils import create_schema, create_table, load_csv_to_layer
+else:
+    # Production GCP Mode: Stays original
+    from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 
 PROJECT_ID = "project-a2ce378b-71f9-4087-95b"
 LOCATION = "africa-south1"
+CSV_BASE_PATH = "/home/airflow/gcs/data"
+
 SQL_FILE_PATH_1 = "/home/airflow/gcs/data/bigquery/bronze.sql"
 SQL_FILE_PATH_2 = "/home/airflow/gcs/data/bigquery/silver.sql"
 SQL_FILE_PATH_3 = "/home/airflow/gcs/data/bigquery/gold.sql"
 
-#Read sql query from file
 def read_sql_file(file_path):
     try:
         with open(file_path, "r") as file:
@@ -25,7 +32,30 @@ BRONZE_QUERY = read_sql_file(SQL_FILE_PATH_1)
 SILVER_QUERY = read_sql_file(SQL_FILE_PATH_2)
 GOLD_QUERY = read_sql_file(SQL_FILE_PATH_3)
 
-# Step 2 - Define default arguments
+# 🐳 Local Container Python Task Wrapper
+def run_local_postgres_pipeline():
+    """Builds your schemas, tables, and streams your local CSV logs into Postgres."""
+    print("Starting local Mapungubwe Data Warehouse Initialization...")
+    
+    # 1. Create your schemas
+    create_schema("bronze_dataset")
+    create_schema("silver_dataset")
+    create_schema("gold_dataset")
+    
+    # 2. Build the physical tables inside your target storage layers
+    create_table("bronze_dataset", "dim_date")
+    create_table("bronze_dataset", "dim_ranger")
+    create_table("bronze_dataset", "dim_zone")
+    create_table("bronze_dataset", "fact_incidents")
+    create_table("bronze_dataset", "fact_patrol")
+    
+    # 3. Stream data from your mounted laptop folders into the database
+    load_csv_to_layer("bronze_dataset", "dim_date", f"{CSV_BASE_PATH}/dim_date.csv")
+    load_csv_to_layer("bronze_dataset", "dim_ranger", f"{CSV_BASE_PATH}/dim_ranger.csv")
+    load_csv_to_layer("bronze_dataset", "dim_zone", f"{CSV_BASE_PATH}/dim_zone.csv")
+    load_csv_to_layer("bronze_dataset", "fact_incidents", f"{CSV_BASE_PATH}/fact_incidents.csv")
+    load_csv_to_layer("bronze_dataset", "fact_patrol", f"{CSV_BASE_PATH}/fact_patrol.csv")
+    print("All local schemas and tables populated successfully!")
 
 ARGS = {
     "owner":"Rachi Huli",
@@ -39,8 +69,6 @@ ARGS = {
     "retry_delay":timedelta(minutes=5)
 }
 
-# Step 3 - Instantiate the DAG
-
 with DAG(
     dag_id = "bigquery_dag",
     schedule_interval = None,
@@ -49,45 +77,36 @@ with DAG(
     tags = ["gcs", "bq", "etl", "marvel"]
 ) as dag:
     
-    # Step 4 - Define tasks
+    if IS_LOCAL:
+        # ==========================================
+        # 🐳 LOCAL DOCKER FLOW ENGINE
+        # ==========================================
+        initialize_warehouse = PythonOperator(
+            task_id = "initialize_warehouse",
+            python_callable = run_local_postgres_pipeline
+        )
+        
+        initialize_warehouse
+    else:
+        # ==========================================
+        # ☁️ PRODUCTION GCP FLOW ENGINE
+        # ==========================================
+        bronze_tables = BigQueryInsertJobOperator(
+            task_id = "bronze_tables",
+            configuration = {"query": {"query": BRONZE_QUERY, "useLegacySql":False, "priority":"BATCH"}},
+            location = LOCATION,
+        )
 
-    bronze_tables = BigQueryInsertJobOperator(
-        task_id = "bronze_tables",
-        configuration = {
-            "query": {
-                "query": BRONZE_QUERY,
-                "useLegacySql":False,
-                "priority":"BATCH",
+        silver_tables = BigQueryInsertJobOperator(
+            task_id = "silver_tables",
+            configuration = {"query": {"query":SILVER_QUERY, "useLegacySql":False, "priority": "BATCH"}},
+            location = LOCATION,
+        )
 
-            }
-        },
-        location = LOCATION,
-    )
+        gold_tables = BigQueryInsertJobOperator(
+            task_id = "gold_tables",
+            configuration = {"query":{"query":GOLD_QUERY, "useLegacySql":False, "priority": "BATCH"}},
+            location = LOCATION,
+        )
 
-    silver_tables = BigQueryInsertJobOperator(
-        task_id = "silver_tables",
-        configuration = {
-            "query": {
-                "query":SILVER_QUERY,
-                "useLegacySql":False,
-                "priority": "BATCH",
-            }
-        },
-        location = LOCATION,
-    )
-
-    gold_tables = BigQueryInsertJobOperator(
-        task_id = "gold_tables",
-        configuration = {
-            "query":{
-                "query":GOLD_QUERY,
-                "useLegacySql":False,
-                "priority": "BATCH",
-            }
-        },
-        location = LOCATION,
-    )
-
-# Step 5 - Define Dependencies
-
-bronze_tables >> silver_tables >> gold_tables
+        bronze_tables >> silver_tables >> gold_tables

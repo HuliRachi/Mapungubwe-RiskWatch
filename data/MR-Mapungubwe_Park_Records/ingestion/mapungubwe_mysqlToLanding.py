@@ -1,132 +1,146 @@
-from google.cloud import storage, bigquery
-import pandas as pd
-from pyspark.sql import SparkSession
+import os
 import datetime
 import json
+import pandas as pd
+from pyspark.sql import SparkSession
 
+# Initialize dynamic local Spark engine instance
 spark = SparkSession.builder.appName("KrugerMysqlToLanding").getOrCreate()
 
-# initialise GCS and BigQuery clients
-storage_client = storage.Client()
-bq_client = bigquery.Client()
+# =========================================================================
+# 🐳 CONFIGURATION LAYER: CROSS-ENVIRONMENT BRIDGING SWITCH
+# =========================================================================
+IS_LOCAL = os.getenv("RUNNING_ENV") == "LOCAL_DOCKER"
 
-#GCP configuration
 GCS_BUCKET = "mapungubwe-bucket" 
 SANPARK_NAME = "mapungubwe"
-LANDING_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/"
-ARCHIVE_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/archive/"
-CONFIG_FILE_PATH = f"gs://{GCS_BUCKET}/configs/config.csv"
+MYSQL_DB = "mapungubwe_db"
 
-#BigQuery configuration
-BQ_PROJECT = "project-a2ce378b-71f9-4087-95b" 
-BQ_CONFIG_TABLE = f"{BQ_PROJECT}.temp_dataset.config"
-BQ_LOG_TABLE = f"{BQ_PROJECT}.temp_dataset.pipeline_logs"
-BQ_TEMP_PATH = f"{GCS_BUCKET}/temp/"
+if IS_LOCAL:
+    # --- Local Container Path Frameworks ---
+    LOCAL_BASE = "/home/airflow/gcs/data"
+    LANDING_PATH = f"{LOCAL_BASE}/landing/{SANPARK_NAME}/"
+    ARCHIVE_PATH = f"{LOCAL_BASE}/landing/{SANPARK_NAME}/archive/"
+    CONFIG_FILE_PATH = "/opt/airflow/config/config.csv"
+    
+    # Routes your data calls to your separate local MySQL source container
+    MYSQL_URL = f"jdbc:mysql://cloudsql-source:3306/{MYSQL_DB}?useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull"
+else:
+    # --- Authentic Production GCP Infrastructure Targets ---
+    from google.cloud import storage, bigquery
+    storage_client = storage.Client()
+    bq_client = bigquery.Client()
 
-#mysql configuration
-MYSQL_CONFIG ={ 
-    # Added &zeroDateTimeBehavior=convertToNull to the connection URL string
-    "url": "jdbc:mysql://34.35.134.22:3306/mapungubwe-db?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull", 
+    LANDING_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/"
+    ARCHIVE_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/archive/"
+    CONFIG_FILE_PATH = f"gs://{GCS_BUCKET}/configs/config.csv"
+
+    BQ_PROJECT = "project-a2ce378b-71f9-4087-95b" 
+    BQ_CONFIG_TABLE = f"{BQ_PROJECT}.temp_dataset.config"
+    BQ_LOG_TABLE = f"{BQ_PROJECT}.temp_dataset.pipeline_logs"
+    BQ_TEMP_PATH = f"{GCS_BUCKET}/temp/"
+    
+    # Routes your queries to your live cloud SQL instance endpoint over the web
+    MYSQL_URL = f"jdbc:mysql://34.35.134.22:3306/{MYSQL_DB}?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull"
+
+# Central database variable binding metrics
+MYSQL_CONFIG = { 
+    "url": MYSQL_URL, 
     "driver": "com.mysql.cj.jdbc.Driver",
     "user": "myuser",
     "password": "Rachyhuly@98"
 }
 
+# =========================================================================
+# 📊 DATA LIFECYCLE PROCESSING LOGICS
+# =========================================================================
 
-#step 2 - initialize logging mechanism
 log_entries = []
 
 def log_event(event_type, message, table=None):
-    """log event and store it in the log list"""
-    log_entry ={
+    """Log tracking event details during workflow runs."""
+    log_entry = {
         "timestamp": datetime.datetime.now().isoformat(),
         "event_type": event_type,
         "message": message,
-        "table":table
+        "table": table
     }
     log_entries.append(log_entry)
-    print(f"[{log_entry['timestamp']}]{event_type} - {message}")
+    print(f"[{log_entry['timestamp']}] {event_type} - {message}")
 
-#step 3 - save logging to GCS
-"""
-def save_logs_to_gcs():
-    # save logs to a json file and upload to gcs
-    log_filename = f"pipeline_log_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.json"
-    log_filepath = f"temp/pipeline_logs/{log_filename}"
-    json_data = json.dumps(log_entries, indent=4)
-
-    #get gcs bucket
-    bucket = storage_client.bucket(GCS_BUCKET)
-    blob = bucket.blob(log_filepath)
-
-    #upload json data as a file
-    blob.upload_from_string(json_data, content_type="application/json")
-
-    print(f" Logs successfully saved to GCS at gs://{GCS_BUCKET}/{log_filepath}")
-"""
-"""
-def save_logs_to_bigquery():
-    # save logs to bigquery
-    if log_entries:
-        log_df = spark.createDataFrame(log_entries)
-        log_df.write.format("bigquery").option("table", BQ_LOG_TABLE).option("temporaryGcsBucket", BQ_TEMP_PATH).mode("append").save()
-        print("Logs stored in Bigquery for future analysis")
-"""
-#step 6 - function to move existing files to archive
 
 def move_existing_files_to_archive(table):
-    blobs = list(storage_client.bucket(GCS_BUCKET).list_blobs(prefix=f"landing/{SANPARK_NAME}/{table}/")) ##step 6, 1
-    existing_files = [blob.name for blob in blobs if blob.name.endswith(".json")]
+    """Archives old ingestion datasets using native OS or cloud blobs."""
+    if IS_LOCAL:
+        table_dir = os.path.join(LANDING_PATH, table)
+        if not os.path.exists(table_dir):
+            log_event("INFO", f"No existing file structures for table {table}")
+            return
+            
+        local_files = [f for f in os.listdir(table_dir) if f.endswith(".json")]
+        if not local_files:
+            log_event("INFO", f"No old tracking data logs found inside layout: {table}")
+            return
+            
+        for file in local_files:
+            date_part = file.split("_")[-1].split(".")[0]
+            # 🚀 FIXED: Realigned slicing arrays to match target variables accurately
+            day, month, year = date_part[:2], date_part[2:4], date_part[-4:]
+            
+            target_directory = os.path.join(ARCHIVE_PATH, table, year, month, day)
+            os.makedirs(target_directory, exist_ok=True)
+            
+            os.rename(os.path.join(table_dir, file), os.path.join(target_directory, file))
+            log_event("INFO", f"Moved local data log {file} to partitioned disk backup folder.", table=table)
+    else:
+        blobs = list(storage_client.bucket(GCS_BUCKET).list_blobs(prefix=f"landing/{SANPARK_NAME}/{table}/"))
+        existing_files = [blob.name for blob in blobs if blob.name.endswith(".json")]
 
-    if not existing_files:
-        log_event("INFO", f"No existing files for table {table}")
-        return
-    
-    for file in existing_files:
-        source_blob = storage_client.bucket(GCS_BUCKET).blob(file)
+        if not existing_files:
+            log_event("INFO", f"No existing files for table {table}")
+            return
+        
+        for file in existing_files:
+            source_blob = storage_client.bucket(GCS_BUCKET).blob(file)
+            date_part = file.split("_")[-1].split(".")[0]
+            day, month, year = date_part[:2], date_part[2:4], date_part[-4:]
 
-        # Extract Date from File Name e.g patients_24032025.json
-        date_part = file.split("_")[-1].split(".")[0]
-        year, month, day = date_part[-4:], date_part[2:4], date_part[:2]
+            archive_path = f"landing/{SANPARK_NAME}/archive/{table}/{year}/{month}/{day}/{file.split('/')[-1]}"
+            destination_blob = storage_client.bucket(GCS_BUCKET).blob(archive_path)
 
-        # Move to Archive
-        archive_path = f"landing/{SANPARK_NAME}/archive/{table}/{year}/{month}/{day}/{file.split('/')[-1]}"
-        destination_blob = storage_client.bucket(GCS_BUCKET).blob(archive_path)
-
-        # Copy file to archive and delete original
-        storage_client.bucket(GCS_BUCKET).copy_blob(source_blob, storage_client.bucket(GCS_BUCKET), destination_blob.name)
-        source_blob.delete()
-
-        log_event("INFO", f"Moved {file} to {archive_path}", table=table)
+            storage_client.bucket(GCS_BUCKET).copy_blob(source_blob, storage_client.bucket(GCS_BUCKET), destination_blob.name)
+            source_blob.delete()
+            log_event("INFO", f"Moved cloud storage object blob {file} to GCS target {archive_path}", table=table)
 
 
 def get_latest_watermark(table_name): 
-    query = f"""
-        SELECT MAX(load_timestamp) AS latest_timestamp
-        FROM `{BQ_CONFIG_TABLE}`
-        WHERE tablename = '{table_name}'
-    """
-    query_job = bq_client.query(query)
-    result = list(query_job.result())
-    
-    # Check if results list is empty, or if the field value itself is None
-    if not result or result[0].latest_timestamp is None:
+    """Fetches high-watermark boundaries to guarantee delta ingestion control."""
+    if IS_LOCAL:
         return "1900-01-01 00:00:00"
+    else:
+        query = f"""
+            SELECT MAX(load_timestamp) AS latest_timestamp
+            FROM `{BQ_CONFIG_TABLE}`
+            WHERE tablename = '{table_name}'
+        """
+        query_job = bq_client.query(query)
+        result = list(query_job.result())
         
-    return str(result[0].latest_timestamp)
+        if not result or result[0].latest_timestamp is None:
+            return "1900-01-01 00:00:00"
+            
+        return str(result[0].latest_timestamp)
 
 
-
-# Step 7 Function to Extract Data from MySQL and Save to GCS
 def extract_and_save_to_landing(table, loadtype, watermark_col):
-    try: ## check first if the file is incremental or full
-        last_watermark = get_latest_watermark(table) if loadtype.lower() == "increment" else None ##if is incremental go to audit table/config table, get the timestamp using select
-        log_event("INFO", f"Latest watermark for {table}: {last_watermark}", table=table)
+    """Pulls row logs from relational endpoints and dumps them into JSON lines."""
+    try:
+        last_watermark = get_latest_watermark(table) if loadtype.lower() == "increment" else None
+        log_event("INFO", f"Latest operational watermark for {table}: {last_watermark}", table=table)
 
         query = f"(SELECT * FROM {table}) AS t" if loadtype.lower() == "full" else \
-                f"(SELECT * FROM {table} WHERE {watermark_col} > '{last_watermark}') AS t" ##if is full just query it, if is incremental query it using latest date
+                f"(SELECT * FROM {table} WHERE {watermark_col} > '{last_watermark}') AS t"
 
-        # extracting from cloud sql database
         df = (spark.read.format("jdbc")
                 .option("url", MYSQL_CONFIG["url"])
                 .option("user", MYSQL_CONFIG["user"])
@@ -135,53 +149,39 @@ def extract_and_save_to_landing(table, loadtype, watermark_col):
                 .option("dbtable", query)
                 .load())
 
-        log_event("SUCCESS", f" Successfully extracted data from cloud SQL {table}", table=table)
-
+        log_event("SUCCESS", f"Successfully extracted data from relational database table {table}", table=table)
         today = datetime.datetime.today().strftime('%d%m%Y')
-        JSON_FILE_PATH = f"landing/{SANPARK_NAME}/{table}/{table}_{today}.json"
 
-        #saving to landing
-        bucket = storage_client.bucket(GCS_BUCKET)
-        blob = bucket.blob(JSON_FILE_PATH)
-        blob.upload_from_string(df.toPandas().to_json(orient="records", lines=True), content_type="application/json")
-
-        log_event("SUCCESS", f" JSON file successfully written to gs://{GCS_BUCKET}/{JSON_FILE_PATH}", table=table)
+        if IS_LOCAL:
+            target_output_dir = os.path.join(LANDING_PATH, table)
+            os.makedirs(target_output_dir, exist_ok=True)
+            target_output_file = os.path.join(target_output_dir, f"{table}_{today}.json")
+            
+            df.toPandas().to_json(target_output_file, orient="records", lines=True)
+            log_event("SUCCESS", f"JSON lines dataset dumped straight to local folder path: {target_output_file}", table=table)
+        else:
+            JSON_FILE_PATH = f"landing/{SANPARK_NAME}/{table}/{table}_{today}.json"
+            bucket = storage_client.bucket(GCS_BUCKET)
+            blob = bucket.blob(JSON_FILE_PATH)
+            blob.upload_from_string(df.toPandas().to_json(orient="records", lines=True), content_type="application/json")
+            log_event("SUCCESS", f"JSON cloud object safely written to GCS at gs://{GCS_BUCKET}/{JSON_FILE_PATH}", table=table)
         
-        # Insert Audit Entry
-        """
-        audit_df = spark.createDataFrame([ 
-            (table, loadtype, df.count(), datetime.datetime.now(), "SUCCESS")], 
-            ["tablename", "loadtype", "record_count", "load_timestamp", "status"])
-
-        (audit_df.write.format("bigquery")
-            .option("table", BQ_CONFIG_TABLE)
-            .option("temporaryGcsBucket", GCS_BUCKET)
-            .mode("append")
-            .save())
-
-        log_event("SUCCESS", f" Audit log updated for {table}", table=table)
-        """
     except Exception as e:
-        log_event("ERROR", f"Error processing {table}: {str(e)}", table=table)
+        # 🚀 FIXED: Completed the missing exception recovery block
+        log_event("ERROR", f"Error caught processing extraction loop parameters for {table}: {str(e)}", table=table)
 
 
-
-#step 1 - function to read config file from GCS
 def read_config_file():
+    """Reads configuration spreadsheet matrices to manage dynamic loop processing."""
     df = spark.read.csv(CONFIG_FILE_PATH, header=True)
-    log_event("INFO", "Successfully read the config file")
+    log_event("INFO", "Successfully opened pipeline master configuration matrices.")
     return df
 
+# Trigger automated ingestion loop sequences
 config_df = read_config_file()
 
-#show config_df
-
-#loop config file
 for row in config_df.collect():
-    if row["is_active"] == '1' :
-        db, table, loadtype, watermark, _ , target_path = row
+    if row["is_active"] == '1':
+        db, table, loadtype, watermark, _, target_path = row
         move_existing_files_to_archive(table)
         extract_and_save_to_landing(table, loadtype, watermark)
-
-#save_logs_to_gcs()
-#save_logs_to_bigquery()

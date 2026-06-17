@@ -1,0 +1,146 @@
+# =========================================================================
+# MAPUNGUBWE RISKWATCH: COMPLETE ENTERPRISE CELERYEXECUTOR PIPELINE
+# This container configuration orchestrates a zero-cloud-cost testing sandbox
+# mapping direct file systems, multi-node databases, and message brokers.
+# =========================================================================
+---
+x-airflow-common:
+  &airflow-common # Uses your production portfolio image built on top of stable Apache Airflow
+  image: rachihuli/mapungubwe:1.0.0
+  environment: &airflow-common-env # Core Orchestration Cluster Settings
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+
+    # Internal Metastore Connections (Mapped directly to our persistent postgres microservice)
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:wWfKvYbyD3kRnE4u@postgres:5432/airflow_metadata_db
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://postgres:wWfKvYbyD3kRnE4u@postgres:5432/celery_results_db
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+
+    # Security Governance Parameters (Sourced cleanly from your .env configurations)
+    AIRFLOW__CORE__FERNET_KEY: 'pKInkePlkl79C3mafrjthiQdXnsDU8EXjWDZi-SU00U='
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+
+    # API Verification Backends
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+
+    # Automated Local Environment Flag Trigger
+    RUNNING_ENV: LOCAL_DOCKER
+
+    # Automated Connection Profile Setup (Injected matching your data_utils Hook strings)
+    AIRFLOW_CONN_POSTGRES_DB_YT_ELT: 'postgresql://rachuhuli:X57tmQ846GYP3Jgb@postgres:5432/mapungubwe_db'
+
+  volumes:
+    # 🚀 VITAL PATH BINDINGS: Bridges your laptop assets cleanly to container file regions
+    - ./config:/opt/airflow/config
+    - ./workflows:/opt/airflow/dags
+    - ./data:/opt/airflow/data
+    - ./data/configs:/home/airflow/gcs/data/configs
+    - ./data/MR-Mapungubwe_Park_Records/mapungubwe_park:/home/airflow/gcs/data
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./tests:/opt/airflow/tests
+  user: '50000:0'
+  depends_on: &airflow-common-depends-on
+    redis:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+    cloudsql-source:
+      condition: service_healthy
+
+services:
+  # =========================================================================
+  # 🛢️ 1. MOCK CLOUD SQL SOURCE (Simulates Relational MySQL Transaction Logs)
+  # =========================================================================
+  cloudsql-source:
+    image: mysql:8.0
+    container_name: mapungubwe_mock_cloud_sql
+    environment:
+      - MYSQL_ROOT_PASSWORD=Rachyhuly@98
+      - MYSQL_DATABASE=mapungubwe_db # Fixed character constraint
+      - MYSQL_USER=myuser
+      - MYSQL_PASSWORD=Rachyhuly@98
+    ports:
+      - '3307:3306'
+    volumes:
+      # Automatically streams Kaggle rows into MySQL on startup
+      - ./utils/init_local_cloud_sql.sql:/docker-entrypoint-initdb.d/init_local_cloud_sql.sql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 5s
+      timeout: 2s
+      retries: 5
+    restart: always
+
+  # =========================================================================
+  # 🗄️ 2. CENTRAL DATA WAREHOUSE & INFRASTRUCTURE BACKEND (PostgreSQL)
+  # =========================================================================
+  postgres:
+    container_name: postgres
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=wWfKvYbyD3kRnE4u
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+      # Automated database cluster manager creating meta, queue, and warehouse scopes
+      - ./utils/init_local_db.sql:/docker-entrypoint-initdb.d/init_local_db.sql
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres', '-d', 'postgres']
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  # =========================================================================
+  # 🎯 3. HIGH-SPEED QUEUE DISTRIBUTOR (Redis Message Broker Container)
+  # =========================================================================
+  redis:
+    image: redis:7.2-bookworm
+    container_name: redis
+    expose:
+      - 6379
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 30s
+      retries: 50
+      start_period: 30s
+    restart: always
+
+  # =========================================================================
+  # 🖥️ 4. VISUAL SCHEDULER INTERFACE (Airflow Dashboard Web Server)
+  # =========================================================================
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    ports:
+      - '8080:8080'
+    entrypoint: /bin/bash
+    # Boots metadata DB and pre-provisions secure Admin entry credentials
+    command: -c "airflow db init && airflow users create --username airflow --password airflow1234 --firstname Recruiter --lastname User --role Admin --email reviewer@riskwatch.local && airflow webserver"
+    restart: always
+
+  # =========================================================================
+  # ⚙️ 5. TIME-SCHEDULER ENGINE (Airflow Pipeline Daemon)
+  # =========================================================================
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    restart: always
+
+  # =========================================================================
+  # 👷 6. ETL WORKER ENGINE (Celery Distributed Executer Node)
+  # =========================================================================
+  airflow-worker:
+    <<: *airflow-common
+    container_name: airflow-worker
+    command: celery worker
+    restart: always
+
+volumes:
+  postgres-db-volume:
