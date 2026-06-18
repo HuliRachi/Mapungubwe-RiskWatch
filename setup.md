@@ -1,4 +1,4 @@
-## 🧳 For Recruiters: 2-Minute Local Quick Start
+## 🧳Local Quick Start
 
 If you have cloned this repository to evaluate my engineering framework, follow these rapid steps to spin up the full architecture and see all pipeline tracks go green instantly.
 
