@@ -17,5 +17,5 @@ options:
 
 substitutions:
   _DAGS_DIRECTORY: 'workflows/'
-  _DAGS_BUCKET: 'africa-south1-mapungubwe-co-5f917e09-bucket'
+  _DAGS_BUCKET: 'africa-south1-mapungubwe-co-1780652a-bucket'
   _DATA_DIRECTORY: 'data/'
