@@ -4,7 +4,7 @@ If you have cloned this repository to evaluate my engineering framework, follow 
 
 ### 🔌 Step 1: Clone & Verify the Filesystem
 
-Ensure you are in the project's root folder where the `docker-compose.yml` sits, and verify that your local Docker Desktop application is currently running.
+Ensure you are in the project's root folder where the `docker-compose.yml` sits, and verify that your local **Docker Desktop application** is currently running.
 
 ### 🚀 Step 2: One-Command
 

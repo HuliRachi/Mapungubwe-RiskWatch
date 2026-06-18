@@ -1,7 +1,4 @@
--- =========================================================================
--- MAPUNGUBWE RISKWATCH: MOCK TRANSACTINAL SOURCE (OLTP)
--- This script runs inside the MySQL container to simulate Cloud SQL logs.
--- =========================================================================
+--mock data for local docker
 
 CREATE DATABASE IF NOT EXISTS mapungubwe_db;
 USE mapungubwe_db;

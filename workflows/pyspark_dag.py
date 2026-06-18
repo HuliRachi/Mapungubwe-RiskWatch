@@ -34,13 +34,11 @@ with DAG(
 ) as dag:
     
     if IS_LOCAL:
-        # --- LOCAL DOCKER TASK PIPELINE ---
         pyspark_task_1 = BashOperator(
             task_id = "pyspark_task_1",
             bash_command = "echo 'Local Simulation: PySpark MySQL extraction steps successfully parsed!'",
         )
     else:
-        # --- PRODUCTION GCP CLOUD TASK ---
         pyspark_task_1 = DataprocSubmitJobOperator(
             task_id = "pyspark_task_1",
             job = PYSPARK_JOB_1,

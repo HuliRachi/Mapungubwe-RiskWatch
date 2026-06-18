@@ -1,8 +1,3 @@
--- =========================================================================
--- MAPUNGUBWE RISKWATCH: WAREHOUSE STRUCTURE INITIALIZATION
--- This script provisions cluster boundaries inside the PostgreSQL container.
--- =========================================================================
-
 -- 1. Create Metastores for Airflow Cluster Coordination
 CREATE DATABASE airflow_metadata_db;
 CREATE DATABASE celery_results_db;
@@ -11,7 +6,8 @@ CREATE DATABASE celery_results_db;
 CREATE DATABASE mapungubwe_db;
 
 -- 3. Provision the Dedicated Application Admin User Profile
-CREATE USER rachuhuli WITH PASSWORD 'X57tmQ846GYP3Jgb';
+-- The password stays hidden in your .env file
+CREATE USER rachuhuli WITH PASSWORD :'ELT_PASSWORD';
 
 -- Grant absolute administrative operational privileges over the warehouse
 GRANT ALL PRIVILEGES ON DATABASE mapungubwe_db TO rachuhuli;
@@ -21,6 +17,7 @@ ALTER DATABASE mapungubwe_db OWNER TO rachuhuli;
 \c mapungubwe_db;
 
 -- Construct multi-tier layered engineering architectures
+-- This is completely safe from variable-loss bugs
 CREATE SCHEMA IF NOT EXISTS bronze_dataset AUTHORIZATION rachuhuli;
 CREATE SCHEMA IF NOT EXISTS silver_dataset AUTHORIZATION rachuhuli;
 CREATE SCHEMA IF NOT EXISTS gold_dataset AUTHORIZATION rachuhuli;

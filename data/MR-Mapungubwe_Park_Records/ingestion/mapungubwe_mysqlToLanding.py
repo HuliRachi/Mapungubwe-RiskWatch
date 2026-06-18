@@ -7,9 +7,6 @@ from pyspark.sql import SparkSession
 # Initialize dynamic local Spark engine instance
 spark = SparkSession.builder.appName("KrugerMysqlToLanding").getOrCreate()
 
-# =========================================================================
-# 🐳 CONFIGURATION LAYER: CROSS-ENVIRONMENT BRIDGING SWITCH
-# =========================================================================
 IS_LOCAL = os.getenv("RUNNING_ENV") == "LOCAL_DOCKER"
 
 GCS_BUCKET = "mapungubwe-bucket" 
@@ -23,7 +20,6 @@ if IS_LOCAL:
     ARCHIVE_PATH = f"{LOCAL_BASE}/landing/{SANPARK_NAME}/archive/"
     CONFIG_FILE_PATH = "/opt/airflow/config/config.csv"
     
-    # Routes your data calls to your separate local MySQL source container
     MYSQL_URL = f"jdbc:mysql://cloudsql-source:3306/{MYSQL_DB}?useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull"
 else:
     # --- Authentic Production GCP Infrastructure Targets ---
@@ -33,27 +29,21 @@ else:
 
     LANDING_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/"
     ARCHIVE_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/archive/"
-    CONFIG_FILE_PATH = f"gs://{GCS_BUCKET}/configs/config.csv"
+    CONFIG_FILE_PATH = f"gs://{GCS_BUCKET}/config/config.csv"
 
     BQ_PROJECT = "project-a2ce378b-71f9-4087-95b" 
     BQ_CONFIG_TABLE = f"{BQ_PROJECT}.temp_dataset.config"
     BQ_LOG_TABLE = f"{BQ_PROJECT}.temp_dataset.pipeline_logs"
     BQ_TEMP_PATH = f"{GCS_BUCKET}/temp/"
     
-    # Routes your queries to your live cloud SQL instance endpoint over the web
     MYSQL_URL = f"jdbc:mysql://34.35.134.22:3306/{MYSQL_DB}?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull"
 
-# Central database variable binding metrics
 MYSQL_CONFIG = { 
     "url": MYSQL_URL, 
     "driver": "com.mysql.cj.jdbc.Driver",
     "user": "myuser",
     "password": "Rachyhuly@98"
 }
-
-# =========================================================================
-# 📊 DATA LIFECYCLE PROCESSING LOGICS
-# =========================================================================
 
 log_entries = []
 
@@ -84,7 +74,7 @@ def move_existing_files_to_archive(table):
             
         for file in local_files:
             date_part = file.split("_")[-1].split(".")[0]
-            # 🚀 FIXED: Realigned slicing arrays to match target variables accurately
+            
             day, month, year = date_part[:2], date_part[2:4], date_part[-4:]
             
             target_directory = os.path.join(ARCHIVE_PATH, table, year, month, day)
@@ -167,7 +157,6 @@ def extract_and_save_to_landing(table, loadtype, watermark_col):
             log_event("SUCCESS", f"JSON cloud object safely written to GCS at gs://{GCS_BUCKET}/{JSON_FILE_PATH}", table=table)
         
     except Exception as e:
-        # 🚀 FIXED: Completed the missing exception recovery block
         log_event("ERROR", f"Error caught processing extraction loop parameters for {table}: {str(e)}", table=table)
 
 
@@ -177,7 +166,6 @@ def read_config_file():
     log_event("INFO", "Successfully opened pipeline master configuration matrices.")
     return df
 
-# Trigger automated ingestion loop sequences
 config_df = read_config_file()
 
 for row in config_df.collect():

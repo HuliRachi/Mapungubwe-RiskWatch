@@ -2,9 +2,7 @@ steps:
   # install python dependencies
   - name: 'python'
     entrypoint: pip
-    args: ['install', '-r', 'utils/requirements.txt', '--user']
-
-    #run the script to upload DAGs and Data to the composer bucket
+    args: ['install', '-r', 'requirements.txt', '--user']
 
   - name: 'python'
     entrypoint: python

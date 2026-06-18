@@ -4,12 +4,8 @@ from datetime import datetime
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from psycopg2.extras import RealDictCursor
 
-# =========================================================================
-# 🐳 1. CONNECTION MANAGEMENT (Your exact PostgresHook style)
-# =========================================================================
 def get_conn_cursor():
     """Establishes connection utilizing Airflow's built-in hooks system."""
-    # Matches the connection ID you established in your .env file
     hook = PostgresHook(postgres_conn_id="POSTGRES_DB_YT_ELT")
     conn = hook.get_conn()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -20,10 +16,6 @@ def close_conn_cursor(conn, cur):
     cur.close()
     conn.close()
 
-# =========================================================================
-# 🚀 2. DDL INITIALIZATION LAYERS (Your exact schema logic)
-# =========================================================================
-
 # create schema
 def create_schema(schema):
     conn, cur = get_conn_cursor()
@@ -31,7 +23,7 @@ def create_schema(schema):
     cur.execute(schema_sql)
     conn.commit()
     close_conn_cursor(conn, cur)
-    print(f"✔️ Schema checked/created: {schema}")
+    print(f" Schema checked/created: {schema}")
 
 # create tables
 def create_table(schema, table):
@@ -102,14 +94,11 @@ def create_table(schema, table):
     close_conn_cursor(conn, cur)
     print(f"   ✔️ Table checked/created: {schema}.{table}")
 
-# =========================================================================
-# 🔄 3. CSV EXTRACTION & SEED LOGIC (Bridging your pipeline files)
-# =========================================================================
+
 def load_csv_to_layer(schema, table, csv_file_path):
     """Parses raw CSV logs into structured data warehouse layers."""
     conn, cur = get_conn_cursor()
     
-    # Clears old records to enforce primary key consistency across re-runs
     cur.execute(f"TRUNCATE TABLE {schema}.{table} CASCADE;")
     
     with open(csv_file_path, 'r') as f:

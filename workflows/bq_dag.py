@@ -2,15 +2,13 @@ import os
 from airflow import DAG
 from datetime import datetime, timedelta
 
-# 🐳 Docker vs GCP Cloud Environment Switch
+
 IS_LOCAL = os.getenv("RUNNING_ENV") == "LOCAL_DOCKER"
 
 if IS_LOCAL:
-    # Local Docker Mode: Uses your custom Python operator and utils functions
     from airflow.operators.python import PythonOperator
     from datawarehouse.data_utils import create_schema, create_table, load_csv_to_layer
 else:
-    # Production GCP Mode: Stays original
     from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 
 PROJECT_ID = "project-a2ce378b-71f9-4087-95b"
@@ -32,24 +30,20 @@ BRONZE_QUERY = read_sql_file(SQL_FILE_PATH_1)
 SILVER_QUERY = read_sql_file(SQL_FILE_PATH_2)
 GOLD_QUERY = read_sql_file(SQL_FILE_PATH_3)
 
-# 🐳 Local Container Python Task Wrapper
 def run_local_postgres_pipeline():
     """Builds your schemas, tables, and streams your local CSV logs into Postgres."""
     print("Starting local Mapungubwe Data Warehouse Initialization...")
     
-    # 1. Create your schemas
     create_schema("bronze_dataset")
     create_schema("silver_dataset")
     create_schema("gold_dataset")
     
-    # 2. Build the physical tables inside your target storage layers
     create_table("bronze_dataset", "dim_date")
     create_table("bronze_dataset", "dim_ranger")
     create_table("bronze_dataset", "dim_zone")
     create_table("bronze_dataset", "fact_incidents")
     create_table("bronze_dataset", "fact_patrol")
     
-    # 3. Stream data from your mounted laptop folders into the database
     load_csv_to_layer("bronze_dataset", "dim_date", f"{CSV_BASE_PATH}/dim_date.csv")
     load_csv_to_layer("bronze_dataset", "dim_ranger", f"{CSV_BASE_PATH}/dim_ranger.csv")
     load_csv_to_layer("bronze_dataset", "dim_zone", f"{CSV_BASE_PATH}/dim_zone.csv")
@@ -78,9 +72,7 @@ with DAG(
 ) as dag:
     
     if IS_LOCAL:
-        # ==========================================
-        # 🐳 LOCAL DOCKER FLOW ENGINE
-        # ==========================================
+        
         initialize_warehouse = PythonOperator(
             task_id = "initialize_warehouse",
             python_callable = run_local_postgres_pipeline
@@ -88,9 +80,7 @@ with DAG(
         
         initialize_warehouse
     else:
-        # ==========================================
-        # ☁️ PRODUCTION GCP FLOW ENGINE
-        # ==========================================
+        
         bronze_tables = BigQueryInsertJobOperator(
             task_id = "bronze_tables",
             configuration = {"query": {"query": BRONZE_QUERY, "useLegacySql":False, "priority":"BATCH"}},
