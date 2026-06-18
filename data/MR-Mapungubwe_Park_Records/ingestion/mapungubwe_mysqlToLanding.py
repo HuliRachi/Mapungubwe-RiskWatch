@@ -33,10 +33,8 @@ else:
 
     BQ_PROJECT = "project-a2ce378b-71f9-4087-95b" 
     BQ_CONFIG_TABLE = f"{BQ_PROJECT}.temp_dataset.config"
-    BQ_LOG_TABLE = f"{BQ_PROJECT}.temp_dataset.pipeline_logs"
-    BQ_TEMP_PATH = f"{GCS_BUCKET}/temp/"
     
-    MYSQL_URL = f"jdbc:mysql://34.35.134.22:3306/{MYSQL_DB}?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull"
+    MYSQL_URL = f"jdbc:mysql://34.35.6.19:3306/{MYSQL_DB}?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull"
 
 MYSQL_CONFIG = { 
     "url": MYSQL_URL, 
