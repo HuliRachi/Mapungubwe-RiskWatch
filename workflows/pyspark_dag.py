@@ -3,12 +3,7 @@ from airflow import DAG
 from datetime import timedelta
 from datetime import datetime, timedelta
 
-IS_LOCAL = os.getenv("RUNNING_ENV") == "LOCAL_DOCKER"
-
-if IS_LOCAL:
-    from airflow.operators.bash import BashOperator
-else:
-    from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitJobOperator
+from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitJobOperator
 
 PROJECT_ID = "project-a2ce378b-71f9-4087-95b" 
 REGION = "africa-south1"
@@ -33,17 +28,11 @@ with DAG(
     tags = ["pyspark", "dataproc", "etl"]
 ) as dag:
     
-    if IS_LOCAL:
-        pyspark_task_1 = BashOperator(
-            task_id = "pyspark_task_1",
-            bash_command = "echo 'Local Simulation: PySpark MySQL extraction steps successfully parsed!'",
-        )
-    else:
-        pyspark_task_1 = DataprocSubmitJobOperator(
-            task_id = "pyspark_task_1",
-            job = PYSPARK_JOB_1,
-            region = REGION,
-            project_id = PROJECT_ID
-        )
+    pyspark_task_1 = DataprocSubmitJobOperator(
+        task_id = "pyspark_task_1",
+        job = PYSPARK_JOB_1,
+        region = REGION,
+        project_id = PROJECT_ID
+    )
 
 pyspark_task_1

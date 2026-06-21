@@ -71,32 +71,23 @@ with DAG(
     tags = ["gcs", "bq", "etl", "marvel"]
 ) as dag:
     
-    if IS_LOCAL:
         
-        initialize_warehouse = PythonOperator(
-            task_id = "initialize_warehouse",
-            python_callable = run_local_postgres_pipeline
-        )
-        
-        initialize_warehouse
-    else:
-        
-        bronze_tables = BigQueryInsertJobOperator(
-            task_id = "bronze_tables",
-            configuration = {"query": {"query": BRONZE_QUERY, "useLegacySql":False, "priority":"BATCH"}},
-            location = LOCATION,
-        )
+    bronze_tables = BigQueryInsertJobOperator(
+        task_id = "bronze_tables",
+        configuration = {"query": {"query": BRONZE_QUERY, "useLegacySql":False, "priority":"BATCH"}},
+        location = LOCATION,
+    )
 
-        silver_tables = BigQueryInsertJobOperator(
-            task_id = "silver_tables",
-            configuration = {"query": {"query":SILVER_QUERY, "useLegacySql":False, "priority": "BATCH"}},
-            location = LOCATION,
-        )
+    silver_tables = BigQueryInsertJobOperator(
+        task_id = "silver_tables",
+        configuration = {"query": {"query":SILVER_QUERY, "useLegacySql":False, "priority": "BATCH"}},
+        location = LOCATION,
+    )
 
-        gold_tables = BigQueryInsertJobOperator(
-            task_id = "gold_tables",
-            configuration = {"query":{"query":GOLD_QUERY, "useLegacySql":False, "priority": "BATCH"}},
-            location = LOCATION,
-        )
+    gold_tables = BigQueryInsertJobOperator(
+        task_id = "gold_tables",
+        configuration = {"query":{"query":GOLD_QUERY, "useLegacySql":False, "priority": "BATCH"}},
+        location = LOCATION,
+    )
 
-        bronze_tables >> silver_tables >> gold_tables
+    bronze_tables >> silver_tables >> gold_tables
