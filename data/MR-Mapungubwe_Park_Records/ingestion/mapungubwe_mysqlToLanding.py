@@ -1,77 +1,81 @@
-import os
-import datetime
-import json
+from google.cloud import storage, bigquery
 import pandas as pd
 from pyspark.sql import SparkSession
-from google.cloud import storage, bigquery
-# Initialize dynamic local Spark engine instance
+import datetime
+import json
+
 spark = SparkSession.builder.appName("KrugerMysqlToLanding").getOrCreate()
 
-
-GCS_BUCKET = "mapungubwe-bucket" 
-SANPARK_NAME = "mapungubwe"
-MYSQL_DB = "mapungubwe_db"
-
-    
+# initialise GCS and BigQuery clients
 storage_client = storage.Client()
 bq_client = bigquery.Client()
 
+#GCP configuration
+GCS_BUCKET = "mapungubwe-bucket" 
+SANPARK_NAME = "mapungubwe"
 LANDING_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/"
 ARCHIVE_PATH = f"gs://{GCS_BUCKET}/landing/{SANPARK_NAME}/archive/"
 CONFIG_FILE_PATH = f"gs://{GCS_BUCKET}/config/config.csv"
 
+#BigQuery configuration
 BQ_PROJECT = "project-a2ce378b-71f9-4087-95b" 
 BQ_CONFIG_TABLE = f"{BQ_PROJECT}.temp_dataset.config"
-    
-MYSQL_URL = f"jdbc:mysql://34.35.6.19:3306/{MYSQL_DB}?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull"
+BQ_LOG_TABLE = f"{BQ_PROJECT}.temp_dataset.pipeline_logs"
 
-MYSQL_CONFIG = { 
-    "url": MYSQL_URL, 
+
+#mysql configuration
+MYSQL_CONFIG ={ 
+    # Added &zeroDateTimeBehavior=convertToNull to the connection URL string
+    "url": "jdbc:mysql://34.35.155.10:3306/mapungubwe-db?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull", 
     "driver": "com.mysql.cj.jdbc.Driver",
     "user": "myuser",
     "password": "Rachyhuly@98"
 }
 
+
+#step 2 - initialize logging mechanism
 log_entries = []
 
 def log_event(event_type, message, table=None):
-    """Log tracking event details during workflow runs."""
-    log_entry = {
+    """log event and store it in the log list"""
+    log_entry ={
         "timestamp": datetime.datetime.now().isoformat(),
         "event_type": event_type,
         "message": message,
-        "table": table
+        "table":table
     }
     log_entries.append(log_entry)
-    print(f"[{log_entry['timestamp']}] {event_type} - {message}")
+    print(f"[{log_entry['timestamp']}]{event_type} - {message}")
 
+#step 6 - function to move existing files to archive
 
 def move_existing_files_to_archive(table):
-    """Archives old ingestion datasets using native OS or cloud blobs."""
-
-    blobs = list(storage_client.bucket(GCS_BUCKET).list_blobs(prefix=f"landing/{SANPARK_NAME}/{table}/"))
+    blobs = list(storage_client.bucket(GCS_BUCKET).list_blobs(prefix=f"landing/{SANPARK_NAME}/{table}/")) ##step 6, 1
     existing_files = [blob.name for blob in blobs if blob.name.endswith(".json")]
 
     if not existing_files:
         log_event("INFO", f"No existing files for table {table}")
         return
-        
+    
     for file in existing_files:
         source_blob = storage_client.bucket(GCS_BUCKET).blob(file)
-        date_part = file.split("_")[-1].split(".")[0]
-        day, month, year = date_part[:2], date_part[2:4], date_part[-4:]
 
+        # Extract Date from File Name e.g patients_24032025.json
+        date_part = file.split("_")[-1].split(".")[0]
+        year, month, day = date_part[-4:], date_part[2:4], date_part[:2]
+
+        # Move to Archive
         archive_path = f"landing/{SANPARK_NAME}/archive/{table}/{year}/{month}/{day}/{file.split('/')[-1]}"
         destination_blob = storage_client.bucket(GCS_BUCKET).blob(archive_path)
 
+        # Copy file to archive and delete original
         storage_client.bucket(GCS_BUCKET).copy_blob(source_blob, storage_client.bucket(GCS_BUCKET), destination_blob.name)
         source_blob.delete()
-        log_event("INFO", f"Moved cloud storage object blob {file} to GCS target {archive_path}", table=table)
 
+        log_event("INFO", f"Moved {file} to {archive_path}", table=table)
 
+# function to get latest watermark
 def get_latest_watermark(table_name): 
-    """Fetches high-watermark boundaries to guarantee delta ingestion control."""
-    
     query = f"""
         SELECT MAX(load_timestamp) AS latest_timestamp
         FROM `{BQ_CONFIG_TABLE}`
@@ -79,22 +83,25 @@ def get_latest_watermark(table_name):
     """
     query_job = bq_client.query(query)
     result = list(query_job.result())
-        
+    
+    # Check if results list is empty, or if the field value itself is None
     if not result or result[0].latest_timestamp is None:
         return "1900-01-01 00:00:00"
-            
+        
     return str(result[0].latest_timestamp)
 
 
+
+# Step 7 Function to Extract Data from MySQL and Save to GCS
 def extract_and_save_to_landing(table, loadtype, watermark_col):
-    """Pulls row logs from relational endpoints and dumps them into JSON lines."""
-    try:
-        last_watermark = get_latest_watermark(table) if loadtype.lower() == "increment" else None
-        log_event("INFO", f"Latest operational watermark for {table}: {last_watermark}", table=table)
+    try: ## check first if the file is incremental or full
+        last_watermark = get_latest_watermark(table) if loadtype.lower() == "increment" else None ##if is incremental go to audit table/config table, get the timestamp using select
+        log_event("INFO", f"Latest watermark for {table}: {last_watermark}", table=table)
 
         query = f"(SELECT * FROM {table}) AS t" if loadtype.lower() == "full" else \
-                f"(SELECT * FROM {table} WHERE {watermark_col} > '{last_watermark}') AS t"
+                f"(SELECT * FROM {table} WHERE {watermark_col} > '{last_watermark}') AS t" ##if is full just query it, if is incremental query it using latest date
 
+        # extracting from cloud sql database
         df = (spark.read.format("jdbc")
                 .option("url", MYSQL_CONFIG["url"])
                 .option("user", MYSQL_CONFIG["user"])
@@ -103,30 +110,37 @@ def extract_and_save_to_landing(table, loadtype, watermark_col):
                 .option("dbtable", query)
                 .load())
 
-        log_event("SUCCESS", f"Successfully extracted data from relational database table {table}", table=table)
-        today = datetime.datetime.today().strftime('%d%m%Y')
+        log_event("SUCCESS", f" Successfully extracted data from cloud SQL {table}", table=table)
 
-        
+        today = datetime.datetime.today().strftime('%d%m%Y')
         JSON_FILE_PATH = f"landing/{SANPARK_NAME}/{table}/{table}_{today}.json"
+
+        #saving to landing
         bucket = storage_client.bucket(GCS_BUCKET)
         blob = bucket.blob(JSON_FILE_PATH)
         blob.upload_from_string(df.toPandas().to_json(orient="records", lines=True), content_type="application/json")
-        log_event("SUCCESS", f"JSON cloud object safely written to GCS at gs://{GCS_BUCKET}/{JSON_FILE_PATH}", table=table)
+
+        log_event("SUCCESS", f" JSON file successfully written to gs://{GCS_BUCKET}/{JSON_FILE_PATH}", table=table)
         
     except Exception as e:
-        log_event("ERROR", f"Error caught processing extraction loop parameters for {table}: {str(e)}", table=table)
+        log_event("ERROR", f"Error processing {table}: {str(e)}", table=table)
 
 
+
+#step 1 - function to read config file from GCS
 def read_config_file():
-    """Reads configuration spreadsheet matrices to manage dynamic loop processing."""
     df = spark.read.csv(CONFIG_FILE_PATH, header=True)
-    log_event("INFO", "Successfully opened pipeline master configuration matrices.")
+    log_event("INFO", "Successfully read the config file")
     return df
 
 config_df = read_config_file()
 
+#show config_df
+
+#loop config file
 for row in config_df.collect():
-    if row["is_active"] == '1':
-        db, table, loadtype, watermark, _, target_path = row
+    if row["is_active"] == '1' :
+        db, table, loadtype, watermark, _ , target_path = row
         move_existing_files_to_archive(table)
         extract_and_save_to_landing(table, loadtype, watermark)
+
