@@ -26,7 +26,7 @@ BQ_LOG_TABLE = f"{BQ_PROJECT}.temp_dataset.pipeline_logs"
 #mysql configuration
 MYSQL_CONFIG ={ 
     # Added &zeroDateTimeBehavior=convertToNull to the connection URL string
-    "url": "jdbc:mysql://34.35.155.10:3306/mapungubwe-db?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull", 
+    "url": "jdbc:mysql://34.35.134.22:3306/mapungubwe_db?useSSL=true&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull", 
     "driver": "com.mysql.cj.jdbc.Driver",
     "user": "myuser",
     "password": "Rachyhuly@98"
