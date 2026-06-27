@@ -1,16 +1,14 @@
-# 🐾 Mapungubwe RiskWatch: End-to-End Pipeline on GCP
-
-<code>I dedicate this project to my role model <i>JOHN DEVAR</i> who is a surgeon, who inspired me to work hard since i was in my final year.</code>
+# Mapungubwe RiskWatch:🦏 End-to-End Pipeline on GCP
 
 `Outside my professional work i love camping in SANParks`
 
-## 📍 What is this project?
+## What is this project?
 
 This project helps **Mapungubwe National Park** solve and prevent poaching activities across its borders and eco-zones. I built an end-to-end data pipeline on **Google Cloud Platform (GCP)** that integrates ranger patrol metrics, incident indicators, and environmental attributes. This system transforms raw field logs into actionable risk scores, allowing park management to optimize ranger deployments and proactively secure high-risk zones.
 
 ---
 
-## ⚠️ The Problem
+## The Problem
 
 Mapungubwe's unique open geography, river borders, and dense wildlife make it a continuous target for illegal trespassing and poaching.
 
@@ -19,13 +17,13 @@ Mapungubwe's unique open geography, river borders, and dense wildlife make it a 
 
 ---
 
-## 💡 The Solution
+## The Solution
 
 I built a scalable "Data Pipeline" that automates the collection, cleaning, and structured loading of operational anti-poaching data.
 
 The core data warehousing engine separates historical structural reference data (Dimension tables loaded via Full Load) from dynamic, incoming operational events (Fact tables loaded via Incremental Load). This allows the system to scale efficiently as field data grows daily.
 
-### 📊 PowerBI Dashboard Analysis
+### PowerBI Dashboard Analysis
 
 <img src="images/Mapungubwe RiskWatch_Dasboard-Analysis.png" alt="PowerBI_Dashboard" width="700" height="350">
 
@@ -34,7 +32,7 @@ The core data warehousing engine separates historical structural reference data 
 3. **Stacked Bar Graph** - Shows poaching and trespassing cases arrested vs incidents still investigated.
 4. **Matrix Table** - Shows most common months which these incidents happen.
 
-### 🛠️ Tech Stack & Pipeline Engine
+### Tech Stack & Pipeline Engine
 
 - **Orchestration:** Cloud Composer (Apache Airflow) for end-to-end workflow automation, task dependency management, and scheduling.
 - **Storage & Data Lake:** Google Cloud Storage (GCS) structured into Landing, Bronze, Silver, and Gold storage tiers.
@@ -46,7 +44,7 @@ The core data warehousing engine separates historical structural reference data 
 
 ---
 
-### 🗺️ Data Pipeline Architecture Diagram
+### Data Pipeline Architecture Diagram
 
 <img src="images/Mapungubwe RiskWatch_Architecture-Diagram.png" alt="Architecture_Diagram" width="700" height="350">
 
@@ -55,7 +53,7 @@ The core data warehousing engine separates historical structural reference data 
 - PySpark on Cloud Dataproc performs schema validation and quality checks (`is_quarantine`) to move clean data into the Silver layer.
 - Finally, data is aggregated into business analytics models in the Gold layer inside BigQuery, feeding the Power BI application directly.
 
-### 🗄️ Core Star Schema Architecture
+### Core Star Schema Architecture
 
 <img src="images/Mapungubwe RiskWatch_ER-Diagram.png" alt="Schema_ER_Diagram" width="700" height="350">
 
@@ -74,7 +72,7 @@ The data lake models 5 distinct structural tables organized to map out field ope
 
 ---
 
-## 🚀 What this project shows
+## What this project shows
 
 - **Data-Driven Security:** It transitions anti-poaching operations from reactive tracking to proactive risk forecasting.
 - **Optimized Resource Deployment:** It identifies exactly which zones require senior rangers based on calculated threat metrics.
@@ -82,7 +80,7 @@ The data lake models 5 distinct structural tables organized to map out field ope
 
 ---
 
-## 📈 Results
+## Results
 
 - **Targeted Patrols:** Rangers can be strategically deployed to zones with high risk scores rather than relying on random routing.
 - **Protected Wildlife:** Swift visual tracking of snare and trespass incidents helps teams intercept threats before animal casualties occur.
