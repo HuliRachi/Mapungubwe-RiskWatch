@@ -1,4 +1,4 @@
-# Mapungubwe RiskWatch:🦏 End-to-End Pipeline on GCP
+# Mapungubwe RiskWatch: End-to-End Pipeline on GCP
 
 `Outside my professional work i love camping in SANParks`
 
