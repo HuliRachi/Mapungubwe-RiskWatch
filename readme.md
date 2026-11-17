@@ -1,7 +1,5 @@
 # Mapungubwe RiskWatch: End-to-End Pipeline on GCP
 
-`Outside my professional work i love camping in SANParks`
-
 ## What is this project?
 
 This project helps **Mapungubwe National Park** solve and prevent poaching activities across its borders and eco-zones. I built an end-to-end data pipeline on **Google Cloud Platform (GCP)** that integrates ranger patrol metrics, incident indicators, and environmental attributes. This system transforms raw field logs into actionable risk scores, allowing park management to optimize ranger deployments and proactively secure high-risk zones.
